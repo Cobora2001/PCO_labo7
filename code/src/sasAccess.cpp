@@ -1,75 +1,104 @@
 #include <sasAccess.h>
 #include <iostream>
-#include <pcosynchro/pcothread.h>
-#include <pcosynchro/pcomutex.h>
-#include <pcosynchro/pcosemaphore.h>
+#include <algorithm> // Pour std::min
 
-sasAccess::sasAccess(unsigned int N) : isFirstAttempt(true), isItOne(false), SIZE(N), 
-                                 nbOfOnesIn(0), nbOfZerosIn(0), nbOfOneWaiting(0), nbOfZerosWaiting(0),
-                                 mutex (), numberOfZerosWaiting(1), numberOfOnesWaiting(1){ }
-
+sasAccess::sasAccess(unsigned int N) 
+    : idIn(0), SIZE(N), nbIn(0), nbOfOneWaiting(0), nbOfZerosWaiting(0),
+      mutex(1), numberOfZerosWaiting(0), numberOfOnesWaiting(0) {
+    if(N <= 1) {
+        std::cerr << "La taille du sas doit être supérieure à 1" << std::endl;
+        exit(1);
+    }
+}
 
 void sasAccess::access(int id){
-    mutex.lock();
-    if(isFirstAttempt){
-        setFirstAttempt(id);
-    }
-
+    mutex.acquire();
+    
     if(id == 1){
-        ++nbOfOneWaiting;
-        while(!canEnterOne()){
-            mutex.unlock();
+        if(canEnterOne()){
+            // Autoriser l'entrée
+            idIn = true;
+            nbIn++;
+            mutex.release();
+        }
+        else{
+            // Ajouter à la file d'attente des 1
+            nbOfOneWaiting++;
+            mutex.release();
+            // Attendre d'être libéré
             numberOfOnesWaiting.acquire();
-            mutex.lock();
         }
-        --nbOfOneWaiting;
-        ++nbOfOnesIn;
-    } else {
-        ++nbOfZerosWaiting;
-        while(!canEnterZero()){
-            mutex.unlock();
-            numberOfZerosWaiting.acquire();
-            mutex.lock();
-        }
-        --nbOfZerosWaiting;
-        ++nbOfZerosIn;
     }
-    mutex.unlock();
+    else { // id == 0
+        if(canEnterZero()){
+            // Autoriser l'entrée
+            idIn = false;
+            nbIn++;
+            mutex.release();
+        }
+        else{
+            // Ajouter à la file d'attente des 0
+            nbOfZerosWaiting++;
+            mutex.release();
+            // Attendre d'être libéré
+            numberOfZerosWaiting.acquire();
+        }
+    }
 }
 
 void sasAccess::leave(int id){
-    mutex.lock();
-    if(id == 1){
-        if(canLeaveOne()){
-            --nbOfOnesIn;
-            if(nbOfOnesIn == 0 && nbOfOneWaiting == 0){
-                isItOne = false;
-                while(nbOfZerosWaiting > 0){
-                    --nbOfZerosWaiting;
-                    numberOfZerosWaiting.release();
-                }
-            } else {
-                numberOfOnesWaiting.release();
-            }
-        }else{
-            mutex.unlock();
-            return;
-        }
-    } else {
-        if(canLeaveZero()){
-            --nbOfZerosIn;
-            if(nbOfZerosIn == 0 && nbOfZerosWaiting == 0){
-                isItOne = true;
-                while(nbOfOneWaiting > 0){
-                    --nbOfOneWaiting;
+    mutex.acquire();
+    nbIn--;
+
+    if(peopleWaiting()){
+        if(id == 1){
+            if(nbOfOneWaiting > 0){
+                // Déterminer combien de 1 peuvent entrer sans dépasser la capacité
+                unsigned int toRelease = std::min(nbOfOneWaiting, SIZE - nbIn);
+                for(unsigned int i = 0; i < toRelease; ++i){
+                    nbOfOneWaiting--;
+                    nbIn++;
                     numberOfOnesWaiting.release();
                 }
-            } else {
-                numberOfZerosWaiting.release();
+                // Définir le type actuel
+                idIn = true;
             }
-        }else{
-            mutex.unlock();
-            return;
+            else if(nbOfZerosWaiting > 0){
+                // Déterminer combien de 0 peuvent entrer sans dépasser la capacité
+                unsigned int toRelease = std::min(nbOfZerosWaiting, SIZE - nbIn);
+                for(unsigned int i = 0; i < toRelease; ++i){
+                    nbOfZerosWaiting--;
+                    nbIn++;
+                    numberOfZerosWaiting.release();
+                }
+                // Définir le type actuel
+                idIn = false;
+            }
+        }
+        else { // id == 0
+            if(nbOfZerosWaiting > 0){
+                // Déterminer combien de 0 peuvent entrer sans dépasser la capacité
+                unsigned int toRelease = std::min(nbOfZerosWaiting, SIZE - nbIn);
+                for(unsigned int i = 0; i < toRelease; ++i){
+                    nbOfZerosWaiting--;
+                    nbIn++;
+                    numberOfZerosWaiting.release();
+                }
+                // Définir le type actuel
+                idIn = false;
+            }
+            else if(nbOfOneWaiting > 0){
+                // Déterminer combien de 1 peuvent entrer sans dépasser la capacité
+                unsigned int toRelease = std::min(nbOfOneWaiting, SIZE - nbIn);
+                for(unsigned int i = 0; i < toRelease; ++i){
+                    nbOfOneWaiting--;
+                    nbIn++;
+                    numberOfOnesWaiting.release();
+                }
+                // Définir le type actuel
+                idIn = true;
+            }
         }
     }
+    mutex.release();
 }

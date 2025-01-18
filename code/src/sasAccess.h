@@ -1,5 +1,5 @@
 #ifndef SASACCESS_H
-#define SASSACCESS_H
+#define SASACCESS_H
 
 #include <pcosynchro/pcothread.h>
 #include <pcosynchro/pcomutex.h>
@@ -7,43 +7,43 @@
 
 class sasAccess{
 public:
-    sasAccess(unsigned int size) {};
+    sasAccess(unsigned int size);
     void access(int id);
     void leave(int id);
 private:
-    PcoMutex mutex;
+    // Mutex pour protéger la section critique
+    PcoSemaphore mutex;
+
+    // Sémaphores pour attendre le droit d'entrer dans la section critique
     PcoSemaphore numberOfZerosWaiting;
     PcoSemaphore numberOfOnesWaiting;
 
-    unsigned int SIZE;
-    unsigned int nbOfOnesIn;
-    unsigned int nbOfZerosIn;
+    // Taille du sas
+    const unsigned int SIZE;
+    // Nombre de personnes présentes dans le sas
+    unsigned int nbIn;
+    // Nombre de 1 en attente pour entrer dans le sas
     unsigned int nbOfOneWaiting;
+    // Nombre de 0 en attente pour entrer dans le sas
     unsigned int nbOfZerosWaiting;
 
-    bool isFirstAttempt, isItOne;
-
-    void setFirstAttempt(int id){
-        isItOne = id == 1;
-        isFirstAttempt = false;
-    }
-  
+    // Type d'agents actuellement dans le sas (0 ou 1)
+    bool idIn;
+    
+    // Vérifie si un agent de type 1 peut entrer
     bool canEnterOne() {
-        return (nbOfZerosIn == 0 && nbOfOnesIn <  SIZE ) && isItOne;
+        return (nbIn < SIZE) && (nbIn == 0 || idIn == 1);
     }
 
+    // Vérifie si un agent de type 0 peut entrer
     bool canEnterZero() {
-        return (nbOfOnesIn == 0 && nbOfZerosIn < SIZE)  && !isItOne;
+        return (nbIn < SIZE) && (nbIn == 0 || idIn == 0);
     }
 
-    bool canLeaveOne() {
-        return nbOfOnesIn > 0 && isItOne;
+    // Vérifie si des agents sont en attente
+    bool peopleWaiting() {
+        return nbOfOneWaiting > 0 || nbOfZerosWaiting > 0;
     }
-
-    bool canLeaveZero() {
-        return nbOfZerosIn > 0 && !isItOne;
-    }
-
 };
 
 #endif // SASACCESS_H
