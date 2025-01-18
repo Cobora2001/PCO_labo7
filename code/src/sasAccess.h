@@ -5,11 +5,32 @@
 #include <pcosynchro/pcomutex.h>
 #include <pcosynchro/pcosemaphore.h>
 
-class sasAccess{
+class SasAccess{
 public:
-    sasAccess(unsigned int size);
+    SasAccess(unsigned int size);
     void access(int id);
     void leave(int id);
+
+    int getNbIn() {
+        mutex.acquire();
+        int res = nbIn;
+        mutex.release();
+        return res;
+    }
+
+    int getNbOfOneWaiting() {
+        mutex.acquire();
+        int res = nbOfOneWaiting;
+        mutex.release();
+        return res;
+    }
+
+    int getNbOfZerosWaiting() {
+        mutex.acquire();
+        int res = nbOfZerosWaiting;
+        mutex.release();
+        return res;
+    }
 private:
     // Mutex pour protéger la section critique
     PcoSemaphore mutex;

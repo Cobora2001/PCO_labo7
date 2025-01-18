@@ -2,7 +2,7 @@
 #include <iostream>
 #include <algorithm> // Pour std::min
 
-sasAccess::sasAccess(unsigned int N) 
+SasAccess::SasAccess(unsigned int N) 
     : idIn(0), SIZE(N), nbIn(0), nbOfOneWaiting(0), nbOfZerosWaiting(0),
       mutex(1), numberOfZerosWaiting(0), numberOfOnesWaiting(0) {
     if(N <= 1) {
@@ -11,7 +11,7 @@ sasAccess::sasAccess(unsigned int N)
     }
 }
 
-void sasAccess::access(int id){
+void SasAccess::access(int id){
     mutex.acquire();
     
     if(id == 1){
@@ -46,7 +46,7 @@ void sasAccess::access(int id){
     }
 }
 
-void sasAccess::leave(int id){
+void SasAccess::leave(int id){
     mutex.acquire();
     nbIn--;
 
