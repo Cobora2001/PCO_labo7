@@ -73,7 +73,7 @@ class ModelSas : public PcoModel
         threads.emplace_back(std::make_unique<Thread1>("1"));
         threads.emplace_back(std::make_unique<Thread2>("2"));
         scenarioBuilder = std::make_unique<ScenarioBuilderBuffer>();
-        scenarioBuilder->init(threads, 2);
+        scenarioBuilder->init(threads, 10);
     }
 
     void preRun(Scenario& /*scenario*/) override
@@ -88,6 +88,10 @@ class ModelSas : public PcoModel
         std::cout << "nbIn = " << sas.getNbIn() << std::endl;
         std::cout << "nbOfOneWaiting = " << sas.getNbOfOneWaiting() << std::endl;
         std::cout << "nbOfZerosWaiting = " << sas.getNbOfZerosWaiting() << std::endl;
+        std::cout << std::flush;
+        possibleNbIn.insert(sas.getNbIn());
+        possibleNbOfOneWaiting.insert(sas.getNbOfOneWaiting());
+        possibleNbOfZerosWaiting.insert(sas.getNbOfZerosWaiting());
     }
 
     std::set<int> possibleNbIn;
