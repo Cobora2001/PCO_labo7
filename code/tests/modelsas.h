@@ -8,12 +8,49 @@
 #include "pcoconcurrencyanalyzer.h"
 #include "sasAccess.h"
 
+static int number = 0;
+
+int getNumber()
+{
+    return number;
+}
+
+class ThreadA : public ObservableThread
+{
+public:
+    explicit ThreadA(std::string id = "") :
+        ObservableThread(std::move(id))
+    {
+        scenarioGraph = std::make_unique<ScenarioGraph>();
+        auto scenario = scenarioGraph->createNode(this, -1);
+        auto p1 = scenarioGraph->createNode(this, 1);
+        auto p2 = scenarioGraph->createNode(this, 2);
+        auto p3 = scenarioGraph->createNode(this, 3);
+        scenario->next.push_back(p1);
+        p1->next.push_back(p2);
+        p2->next.push_back(p3);
+        scenarioGraph->setInitialNode(scenario);
+    }
+
+private:
+    void run() override
+    {
+        startSection(1);
+        number = 0;
+        startSection(2);
+        int reg = number;
+        startSection(3);
+        number = reg + 7;
+        endScenario();
+    }
+};
+
 static SasAccess sas(3);
 
 class ThreadUnique : public ObservableThread
 {
 public:
-    explicit ThreadUnique(std::string id, int agentType) : ObservableThread(std::move(id)), agentType(agentType)
+    ThreadUnique(std::string id, int agentType) : ObservableThread(std::move(id))
     {
         scenarioGraph = std::make_unique<ScenarioGraph>();
         auto scenario = scenarioGraph->createNode(this, -1);
@@ -24,21 +61,21 @@ public:
         scenarioGraph->setInitialNode(scenario);
 
         if(agentType > 1)
-          agentType = 1;
+          agent = 1;
         else if(agentType < 0)
-          agentType = 0;
+          agent = 0;
     }
 
 private:
-    int agentType;
+    int agent;
     void run() override
     {
         startSection(1);
-        std::cout << "Thread with agents " << agentType << " is accessing the sas" << std::endl;
-        sas.access(agentType);
+        std::cout << "Thread with agents " << agent << " is accessing the sas" << std::endl;
+        // sas.access(agent);
         startSection(2);
-        std::cout << "Thread with agents " << agentType << " is leaving the sas" << std::endl;
-        sas.leave(agentType);
+        std::cout << "Thread with agents " << agent << " is leaving the sas" << std::endl;
+        // sas.leave(agent);
         endScenario();
     }
 };
@@ -46,10 +83,10 @@ private:
 class ThreadMultiple : public ObservableThread
 {
 public:
-    explicit ThreadMultiple(std::string id, int agentNumber, int agentType) : ObservableThread(std::move(id)), agentNumber(agentNumber), agentType(agentType)
+    explicit ThreadMultiple(std::string id, int agentNumber, int agentType) : ObservableThread(std::move(id)), agentNb(agentNumber)
     {
         if(agentNumber < 1)
-          agentNumber = 1;
+          agentNb = 1;
         
         scenarioGraph = std::make_unique<ScenarioGraph>();
         auto scenario = scenarioGraph->createNode(this, -1);
@@ -66,25 +103,25 @@ public:
         scenarioGraph->setInitialNode(scenario);
 
         if(agentType > 1)
-          agentType = 1;
+          agent = 1;
         else if(agentType < 0)
-          agentType = 0;
+          agent = 0;
 
     }
 
 private:
-    int agentNumber;
-    int agentType;
+    int agentNb;
+    int agent;
 
     void run() override
     {
-        for(int i = 0; i < agentNumber; ++i) {
+        for(int i = 0; i < agentNb; ++i) {
             startSection(1);
-            sas.access(agentType);
+            sas.access(agent);
         }
-        for(int i = 0; i < agentNumber; ++i) {
+        for(int i = 0; i < agentNb; ++i) {
             startSection(2);
-            sas.leave(agentType);
+            sas.leave(agent);
         }
         endScenario();
     }
@@ -100,10 +137,12 @@ class ModelSas : public PcoModel
     
     void build() override
     {
-        threads.emplace_back(std::make_unique<ThreadUnique>("1", 0));
-        threads.emplace_back(std::make_unique<ThreadUnique>("2", 1));
+        // threads.emplace_back(std::make_unique<ThreadUnique>("1", 0));
+        // threads.emplace_back(std::make_unique<ThreadUnique>("2", 1));
+        threads.emplace_back(std::make_unique<ThreadA>("1"));
+        threads.emplace_back(std::make_unique<ThreadA>("2"));
         scenarioBuilder = std::make_unique<ScenarioBuilderBuffer>();
-        scenarioBuilder->init(threads, 10);
+        scenarioBuilder->init(threads, 100);
     }
 
     void preRun(Scenario& /*scenario*/) override
@@ -115,13 +154,13 @@ class ModelSas : public PcoModel
         std::cout << "---------------------------------------" << std::endl;
         std::cout << "Scenario : ";
         ScenarioPrint::printScenario(scenario);
-        std::cout << "nbIn = " << sas.getNbIn() << std::endl;
-        std::cout << "nbOfOneWaiting = " << sas.getNbOfOneWaiting() << std::endl;
-        std::cout << "nbOfZerosWaiting = " << sas.getNbOfZerosWaiting() << std::endl;
-        std::cout << std::flush;
-        possibleNbIn.insert(sas.getNbIn());
-        possibleNbOfOneWaiting.insert(sas.getNbOfOneWaiting());
-        possibleNbOfZerosWaiting.insert(sas.getNbOfZerosWaiting());
+        // std::cout << "nbIn = " << sas.getNbIn() << std::endl;
+        // std::cout << "nbOfOneWaiting = " << sas.getNbOfOneWaiting() << std::endl;
+        // std::cout << "nbOfZerosWaiting = " << sas.getNbOfZerosWaiting() << std::endl;
+        // std::cout << std::flush;
+        // possibleNbIn.insert(sas.getNbIn());
+        // possibleNbOfOneWaiting.insert(sas.getNbOfOneWaiting());
+        // possibleNbOfZerosWaiting.insert(sas.getNbOfZerosWaiting());
     }
 
     std::set<int> possibleNbIn;
@@ -132,19 +171,19 @@ class ModelSas : public PcoModel
     {
         std::cout << "---------------------------------------" << std::endl;
         std::cout << "Final report" << std::endl;
-        std::cout << "Possible values for nbIn : ";
-        for (const int &value : possibleNbIn)
-            std::cout << value << ", ";
-        std::cout << std::endl;
-        std::cout << "Possible values for nbOfOneWaiting : ";
-        for (const int &value : possibleNbOfOneWaiting)
-            std::cout << value << ", ";
-        std::cout << std::endl;
-        std::cout << "Possible values for nbOfZerosWaiting : ";
-        for (const int &value : possibleNbOfZerosWaiting)
-            std::cout << value << ", ";
-        std::cout << std::endl;
-        std::cout << std::flush;
+        // std::cout << "Possible values for nbIn : ";
+        // for (const int &value : possibleNbIn)
+        //     std::cout << value << ", ";
+        // std::cout << std::endl;
+        // std::cout << "Possible values for nbOfOneWaiting : ";
+        // for (const int &value : possibleNbOfOneWaiting)
+        //     std::cout << value << ", ";
+        // std::cout << std::endl;
+        // std::cout << "Possible values for nbOfZerosWaiting : ";
+        // for (const int &value : possibleNbOfZerosWaiting)
+        //     std::cout << value << ", ";
+        // std::cout << std::endl;
+        // std::cout << std::flush;
     }
 };
 
