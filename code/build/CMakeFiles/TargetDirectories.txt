@@ -1,0 +1,8 @@
+/home/reds/Desktop/git/PCO_lab07/code/build/CMakeFiles/edit_cache.dir
+/home/reds/Desktop/git/PCO_lab07/code/build/CMakeFiles/rebuild_cache.dir
+/home/reds/Desktop/git/PCO_lab07/code/build/src/CMakeFiles/modelchecking_lib.dir
+/home/reds/Desktop/git/PCO_lab07/code/build/src/CMakeFiles/edit_cache.dir
+/home/reds/Desktop/git/PCO_lab07/code/build/src/CMakeFiles/rebuild_cache.dir
+/home/reds/Desktop/git/PCO_lab07/code/build/tests/CMakeFiles/PCO_LAB07.dir
+/home/reds/Desktop/git/PCO_lab07/code/build/tests/CMakeFiles/edit_cache.dir
+/home/reds/Desktop/git/PCO_lab07/code/build/tests/CMakeFiles/rebuild_cache.dir
