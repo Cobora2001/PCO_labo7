@@ -6,12 +6,16 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 set(TEST_FILES
     main.cpp
+    sasAccess.cpp
+    ScenarioCreator.cpp
 )
 
 set(TEST_HEADERS
     modeltemplate.h
     modelnumbers.h
     modelsas.h
+    sasAccess.h
+    ScenarioCreator.h
 )
 
 add_executable(PCO_LAB07 ${TEST_FILES} ${TEST_HEADERS})

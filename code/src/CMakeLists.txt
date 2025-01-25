@@ -6,7 +6,6 @@ set(SRC_FILES
     pcomodel.cpp
     scenariobuilder.cpp
     scenario.cpp
-    sasAccess.cpp
 )
 
 set(HEADER_FILES
@@ -17,7 +16,6 @@ set(HEADER_FILES
     pcomodel.h
     scenariobuilder.h
     scenario.h
-    sasAccess.h
 )
 
 add_library(modelchecking_lib ${SRC_FILES} ${HEADER_FILES})

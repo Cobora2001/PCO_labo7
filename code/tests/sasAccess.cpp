@@ -1,6 +1,7 @@
-#include <sasAccess.h>
+#include "sasAccess.h"
 #include <iostream>
 #include <algorithm> // Pour std::min
+#include "modelsas.h"
 
 SasAccess::SasAccess(unsigned int N) 
     : idIn(0), SIZE(N), nbIn(0), nbOfOneWaiting(0), nbOfZerosWaiting(0),
@@ -11,22 +12,25 @@ SasAccess::SasAccess(unsigned int N)
     }
 }
 
-void SasAccess::access(int id, ObservableThread* overseer){
-    mutex.acquire();
-    
+void SasAccess::access(int id, ThreadParent* overseer){
+    mutex.acquire(); // Bloquant
+    std::cout << "Thread " << overseer->getId() << " in access" << std::endl;
+    overseer->startSect(1);
     if(id == 1){
         if(canEnterOne()){
             // Autoriser l'entrée
             idIn = true;
             nbIn++;
             mutex.release();
+            overseer->endSect();
         }
         else{
             // Ajouter à la file d'attente des 1
             nbOfOneWaiting++;
             mutex.release();
+            overseer->endSect();
             // Attendre d'être libéré
-            numberOfOnesWaiting.acquire();
+            numberOfOnesWaiting.acquire(); // Bloquant
         }
     }
     else { // id == 0
@@ -35,19 +39,26 @@ void SasAccess::access(int id, ObservableThread* overseer){
             idIn = false;
             nbIn++;
             mutex.release();
+            overseer->endSect();
         }
         else{
             // Ajouter à la file d'attente des 0
             nbOfZerosWaiting++;
             mutex.release();
+            overseer->endSect();
+            std::cout << "Thread " << overseer->getId() << " waiting" << std::endl;
             // Attendre d'être libéré
-            numberOfZerosWaiting.acquire();
+            numberOfZerosWaiting.acquire(); // Bloquant
         }
     }
+
+    std::cout << "Thread " << overseer->getId() << " out access" << std::endl;
 }
 
-void SasAccess::leave(int id, ObservableThread* overseer){
-    mutex.acquire();
+void SasAccess::leave(int id, ThreadParent* overseer){
+    mutex.acquire(); // Bloquant
+    std::cout << "Thread " << overseer->getId() << " in leave" << std::endl;
+    overseer->startSect(3);
     nbIn--;
 
     if(peopleWaiting()){
@@ -101,4 +112,6 @@ void SasAccess::leave(int id, ObservableThread* overseer){
         }
     }
     mutex.release();
+    overseer->endSect();
+    std::cout << "Thread " << overseer->getId() << " out leave" << std::endl;
 }

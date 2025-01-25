@@ -7,124 +7,71 @@
 #include "pcosynchro/pcosemaphore.h"
 #include "pcoconcurrencyanalyzer.h"
 #include "sasAccess.h"
-
-static int number = 0;
-
-int getNumber()
-{
-    return number;
-}
-
-class ThreadA : public ObservableThread
-{
-public:
-    explicit ThreadA(std::string id = "") :
-        ObservableThread(std::move(id))
-    {
-        scenarioGraph = std::make_unique<ScenarioGraph>();
-        auto scenario = scenarioGraph->createNode(this, -1);
-        auto p1 = scenarioGraph->createNode(this, 1);
-        auto p2 = scenarioGraph->createNode(this, 2);
-        auto p3 = scenarioGraph->createNode(this, 3);
-        scenario->next.push_back(p1);
-        p1->next.push_back(p2);
-        p2->next.push_back(p3);
-        scenarioGraph->setInitialNode(scenario);
-    }
-
-private:
-    void run() override
-    {
-        startSection(1);
-        number = 0;
-        startSection(2);
-        int reg = number;
-        startSection(3);
-        number = reg + 7;
-        endScenario();
-    }
-};
+#include "ScenarioCreator.h"
 
 static SasAccess sas(3);
 
-class ThreadUnique : public ObservableThread
+// Parent thread, children will define their agent type
+class ThreadParent : public ObservableThread
 {
 public:
-    ThreadUnique(std::string id, int agentType) : ObservableThread(std::move(id))
-    {
+    explicit ThreadParent(std::string id, int agentType) : ObservableThread(std::move(id)), agent(agentType) {
         scenarioGraph = std::make_unique<ScenarioGraph>();
         auto scenario = scenarioGraph->createNode(this, -1);
-        auto p1 = scenarioGraph->createNode(this, 0);
-        auto p2 = scenarioGraph->createNode(this, 1);
-        scenario->next.push_back(p1);
+        auto p0 = scenarioGraph->createNode(this, 0);
+        auto p1 = scenarioGraph->createNode(this, 1);
+        auto p2 = scenarioGraph->createNode(this, 2);
+        auto p3 = scenarioGraph->createNode(this, 3);
+        scenario->next.push_back(p0);
+        p0->next.push_back(p1);
         p1->next.push_back(p2);
+        p2->next.push_back(p3);
         scenarioGraph->setInitialNode(scenario);
 
-        if(agentType > 1)
+        if(agent > 1)
           agent = 1;
-        else if(agentType < 0)
+        else if(agent < 0)
           agent = 0;
+    }
+
+    void startSect(int section) {
+        startSection(section);
+    }
+
+    void endSect() {
+        endSection();
+    }
+
+    void endScen() {
+        endScenario();
     }
 
 private:
     int agent;
     void run() override
     {
-        startSection(1);
-        std::cout << "Thread with agents " << agent << " is accessing the sas" << std::endl;
-        // sas.access(agent);
-        startSection(2);
-        std::cout << "Thread with agents " << agent << " is leaving the sas" << std::endl;
-        // sas.leave(agent);
+        startSect(0); // This section is so that we can check who takes the mutex, and define valid scenarios
+        endSect();
+        sas.access(agent, this);
+        startSect(2); // This section is so that we can check who takes the mutex, and define valid scenarios
+        endSect();
+        sas.leave(agent, this);
         endScenario();
     }
 };
 
-class ThreadMultiple : public ObservableThread
+// Thread with agent type 0
+class ThreadZero : public ThreadParent
 {
 public:
-    explicit ThreadMultiple(std::string id, int agentNumber, int agentType) : ObservableThread(std::move(id)), agentNb(agentNumber)
-    {
-        if(agentNumber < 1)
-          agentNb = 1;
-        
-        scenarioGraph = std::make_unique<ScenarioGraph>();
-        auto scenario = scenarioGraph->createNode(this, -1);
-        auto p1 = scenarioGraph->createNode(this, 1);
-        auto p2 = scenarioGraph->createNode(this, 2);
-        scenario->next.push_back(p1);
-        for(int i = 0; i < agentNumber - 1; ++i) {
-            p1->next.push_back(p1);
-        }
-        p1->next.push_back(p2);
-        for(int i = 0; i < agentNumber - 1; ++i) {
-            p2->next.push_back(p2);
-        }
-        scenarioGraph->setInitialNode(scenario);
+    explicit ThreadZero(std::string id) : ThreadParent(std::move(id), 0) {}
+};
 
-        if(agentType > 1)
-          agent = 1;
-        else if(agentType < 0)
-          agent = 0;
-
-    }
-
-private:
-    int agentNb;
-    int agent;
-
-    void run() override
-    {
-        for(int i = 0; i < agentNb; ++i) {
-            startSection(1);
-            sas.access(agent);
-        }
-        for(int i = 0; i < agentNb; ++i) {
-            startSection(2);
-            sas.leave(agent);
-        }
-        endScenario();
-    }
+// Thread with agent type 1
+class ThreadOne : public ThreadParent
+{
+public:
+    explicit ThreadOne(std::string id) : ThreadParent(std::move(id), 1) {}
 };
 
 class ModelSas : public PcoModel
@@ -137,30 +84,36 @@ class ModelSas : public PcoModel
     
     void build() override
     {
-        // threads.emplace_back(std::make_unique<ThreadUnique>("1", 0));
-        // threads.emplace_back(std::make_unique<ThreadUnique>("2", 1));
-        threads.emplace_back(std::make_unique<ThreadA>("1"));
-        threads.emplace_back(std::make_unique<ThreadA>("2"));
-        scenarioBuilder = std::make_unique<ScenarioBuilderBuffer>();
-        scenarioBuilder->init(threads, 100);
+        threads.emplace_back(std::make_unique<ThreadZero>("1"));
+        threads.emplace_back(std::make_unique<ThreadOne>("2"));
+ 
+        auto t1 = threads[0].get();
+        auto t2 = threads[1].get();
+        auto builder = std::make_unique<PredefinedScenarioBuilderIter>();
+
+        ScenarioCreator scenarioCreator({t1, t2}, {{0, 1}, {2, 3}});
+        std::vector<Scenario> scenarios = scenarioCreator.createScenarios();
+        builder->setScenarios(scenarios);
+        scenarioBuilder = std::move(builder);
     }
 
     void preRun(Scenario& /*scenario*/) override
     {
+        std::cout << std::endl; // Just for the formatting of the output
     }
 
     void postRun(Scenario &scenario) override 
     {
-        std::cout << "---------------------------------------" << std::endl;
         std::cout << "Scenario : ";
         ScenarioPrint::printScenario(scenario);
-        // std::cout << "nbIn = " << sas.getNbIn() << std::endl;
-        // std::cout << "nbOfOneWaiting = " << sas.getNbOfOneWaiting() << std::endl;
-        // std::cout << "nbOfZerosWaiting = " << sas.getNbOfZerosWaiting() << std::endl;
-        // std::cout << std::flush;
-        // possibleNbIn.insert(sas.getNbIn());
-        // possibleNbOfOneWaiting.insert(sas.getNbOfOneWaiting());
-        // possibleNbOfZerosWaiting.insert(sas.getNbOfZerosWaiting());
+        std::cout << "nbIn = " << sas.getNbIn() << std::endl;
+        std::cout << "nbOfOneWaiting = " << sas.getNbOfOneWaiting() << std::endl;
+        std::cout << "nbOfZerosWaiting = " << sas.getNbOfZerosWaiting() << std::endl;
+        std::cout << "---------------------------------------" << std::endl;
+        std::cout << std::flush;
+        possibleNbIn.insert(sas.getNbIn());
+        possibleNbOfOneWaiting.insert(sas.getNbOfOneWaiting());
+        possibleNbOfZerosWaiting.insert(sas.getNbOfZerosWaiting());
     }
 
     std::set<int> possibleNbIn;
@@ -171,20 +124,21 @@ class ModelSas : public PcoModel
     {
         std::cout << "---------------------------------------" << std::endl;
         std::cout << "Final report" << std::endl;
-        // std::cout << "Possible values for nbIn : ";
-        // for (const int &value : possibleNbIn)
-        //     std::cout << value << ", ";
-        // std::cout << std::endl;
-        // std::cout << "Possible values for nbOfOneWaiting : ";
-        // for (const int &value : possibleNbOfOneWaiting)
-        //     std::cout << value << ", ";
-        // std::cout << std::endl;
-        // std::cout << "Possible values for nbOfZerosWaiting : ";
-        // for (const int &value : possibleNbOfZerosWaiting)
-        //     std::cout << value << ", ";
-        // std::cout << std::endl;
-        // std::cout << std::flush;
+        std::cout << "---------------------------------------" << std::endl;
+        std::cout << "Possible values for nbIn : ";
+        for (const int &value : possibleNbIn)
+            std::cout << value << ", ";
+        std::cout << std::endl;
+        std::cout << "Possible values for nbOfOneWaiting : ";
+        for (const int &value : possibleNbOfOneWaiting)
+            std::cout << value << ", ";
+        std::cout << std::endl;
+        std::cout << "Possible values for nbOfZerosWaiting : ";
+        for (const int &value : possibleNbOfZerosWaiting)
+            std::cout << value << ", ";
+        std::cout << std::endl;
+        std::cout << std::flush;
     }
 };
 
-#endif // MODELTEMPLATE_H
+#endif // MODELSAS_H
