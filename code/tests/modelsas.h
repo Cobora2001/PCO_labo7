@@ -130,16 +130,25 @@ class ModelSas : public PcoModel
         std::cout << "Final report" << std::endl;
         std::cout << "---------------------------------------" << std::endl;
         std::cout << "Possible values for nbIn : ";
-        for (const int &value : possibleNbIn)
-            std::cout << value << ", ";
+        for(int i = 0; i < possibleNbIn.size(); ++i) {
+            std::cout << i <<;
+            if(i < possibleNbIn.size() - 1)
+                std::cout << ", ";
+        }
         std::cout << std::endl;
         std::cout << "Possible values for nbOfOneWaiting : ";
-        for (const int &value : possibleNbOfOneWaiting)
-            std::cout << value << ", ";
+        for(int i = 0; i < possibleNbOfOneWaiting.size(); ++i) {
+            std::cout << i;
+            if(i < possibleNbOfOneWaiting.size() - 1)
+                std::cout << ", ";
+        }
         std::cout << std::endl;
         std::cout << "Possible values for nbOfZerosWaiting : ";
-        for (const int &value : possibleNbOfZerosWaiting)
-            std::cout << value << ", ";
+        for(int i = 0; i < possibleNbOfZerosWaiting.size(); ++i) {
+            std::cout << i;
+            if(i < possibleNbOfZerosWaiting.size() - 1)
+                std::cout << ", ";
+        }
         std::cout << std::endl;
         std::cout << std::flush;
     }
