@@ -22,12 +22,10 @@ public:
         auto p1 = scenarioGraph->createNode(this, 1);
         auto p2 = scenarioGraph->createNode(this, 2);
         auto p3 = scenarioGraph->createNode(this, 3);
-        auto p4 = scenarioGraph->createNode(this, 4);
         scenario->next.push_back(p0);
         p0->next.push_back(p1);
         p1->next.push_back(p2);
         p2->next.push_back(p3);
-        p3->next.push_back(p4);
         scenarioGraph->setInitialNode(scenario);
 
         if(agent > 1)
@@ -58,7 +56,6 @@ private:
         startSect(2); // This section is so that we can check who takes the mutex, and define valid scenarios
         endSect();
         sas->leave(agent, this);
-        startSect(4); // This is so that we get the exit message at the end of leave
         endScenario();
     }
 };
@@ -87,14 +84,14 @@ class ModelSas : public PcoModel
     
     void build() override
     {
-        threads.emplace_back(std::make_unique<ThreadZero>("1"));
-        threads.emplace_back(std::make_unique<ThreadOne>("2"));
+        threads.emplace_back(std::make_unique<ThreadZero>("0"));
+        threads.emplace_back(std::make_unique<ThreadOne>("1"));
  
-        auto t1 = threads[0].get();
-        auto t2 = threads[1].get();
+        auto t0 = threads[0].get();
+        auto t1 = threads[1].get();
         auto builder = std::make_unique<PredefinedScenarioBuilderIter>();
 
-        ScenarioCreator scenarioCreator({t1, t2}, {{0, 1}, {2, 3, 4}});
+        ScenarioCreator scenarioCreator({t0, t1}, {{0, 1}, {2, 3}});
         std::vector<Scenario> scenarios = scenarioCreator.createScenarios();
         builder->setScenarios(scenarios);
         scenarioBuilder = std::move(builder);
