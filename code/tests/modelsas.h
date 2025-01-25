@@ -9,7 +9,7 @@
 #include "sasAccess.h"
 #include "ScenarioCreator.h"
 
-static SasAccess sas(3);
+static SasAccess* sas;
 
 // Parent thread, children will define their agent type
 class ThreadParent : public ObservableThread
@@ -22,10 +22,12 @@ public:
         auto p1 = scenarioGraph->createNode(this, 1);
         auto p2 = scenarioGraph->createNode(this, 2);
         auto p3 = scenarioGraph->createNode(this, 3);
+        auto p4 = scenarioGraph->createNode(this, 4);
         scenario->next.push_back(p0);
         p0->next.push_back(p1);
         p1->next.push_back(p2);
         p2->next.push_back(p3);
+        p3->next.push_back(p4);
         scenarioGraph->setInitialNode(scenario);
 
         if(agent > 1)
@@ -52,10 +54,11 @@ private:
     {
         startSect(0); // This section is so that we can check who takes the mutex, and define valid scenarios
         endSect();
-        sas.access(agent, this);
+        sas->access(agent, this);
         startSect(2); // This section is so that we can check who takes the mutex, and define valid scenarios
         endSect();
-        sas.leave(agent, this);
+        sas->leave(agent, this);
+        startSect(4); // This is so that we get the exit message at the end of leave
         endScenario();
     }
 };
@@ -91,7 +94,7 @@ class ModelSas : public PcoModel
         auto t2 = threads[1].get();
         auto builder = std::make_unique<PredefinedScenarioBuilderIter>();
 
-        ScenarioCreator scenarioCreator({t1, t2}, {{0, 1}, {2, 3}});
+        ScenarioCreator scenarioCreator({t1, t2}, {{0, 1}, {2, 3, 4}});
         std::vector<Scenario> scenarios = scenarioCreator.createScenarios();
         builder->setScenarios(scenarios);
         scenarioBuilder = std::move(builder);
@@ -99,6 +102,7 @@ class ModelSas : public PcoModel
 
     void preRun(Scenario& /*scenario*/) override
     {
+        sas = new SasAccess(2);
         std::cout << std::endl; // Just for the formatting of the output
     }
 
@@ -106,14 +110,14 @@ class ModelSas : public PcoModel
     {
         std::cout << "Scenario : ";
         ScenarioPrint::printScenario(scenario);
-        std::cout << "nbIn = " << sas.getNbIn() << std::endl;
-        std::cout << "nbOfOneWaiting = " << sas.getNbOfOneWaiting() << std::endl;
-        std::cout << "nbOfZerosWaiting = " << sas.getNbOfZerosWaiting() << std::endl;
+        std::cout << "nbIn = " << sas->getNbIn() << std::endl;
+        std::cout << "nbOfOneWaiting = " << sas->getNbOfOneWaiting() << std::endl;
+        std::cout << "nbOfZerosWaiting = " << sas->getNbOfZerosWaiting() << std::endl;
         std::cout << "---------------------------------------" << std::endl;
         std::cout << std::flush;
-        possibleNbIn.insert(sas.getNbIn());
-        possibleNbOfOneWaiting.insert(sas.getNbOfOneWaiting());
-        possibleNbOfZerosWaiting.insert(sas.getNbOfZerosWaiting());
+        possibleNbIn.insert(sas->getNbIn());
+        possibleNbOfOneWaiting.insert(sas->getNbOfOneWaiting());
+        possibleNbOfZerosWaiting.insert(sas->getNbOfZerosWaiting());
     }
 
     std::set<int> possibleNbIn;

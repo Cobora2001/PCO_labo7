@@ -33,6 +33,25 @@ public:
         mutex.release();
         return res;
     }
+
+    void reset() {
+        mutex.acquire();
+        // Libérer les personnes en attente pour qu'elles ne bloquent pas le prochain scénario
+        for(unsigned int i = 0; i < nbOfOneWaiting; ++i){
+            numberOfOnesWaiting.release();
+        }
+        for(unsigned int i = 0; i < nbOfZerosWaiting; ++i){
+            numberOfZerosWaiting.release();
+        }
+
+        // Réinitialiser les variables
+        nbIn = 0;
+        nbOfOneWaiting = 0;
+        nbOfZerosWaiting = 0;
+        idIn = false;
+    
+        mutex.release();
+    }
 private:
     // Mutex pour protéger la section critique
     PcoSemaphore mutex;

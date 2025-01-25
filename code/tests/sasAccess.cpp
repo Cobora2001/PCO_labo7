@@ -22,6 +22,7 @@ void SasAccess::access(int id, ThreadParent* overseer){
             idIn = true;
             nbIn++;
             mutex.release();
+            std::cout << "Thread " << overseer->getId() << " entered without waiting" << std::endl;
             overseer->endSect();
         }
         else{
@@ -29,6 +30,7 @@ void SasAccess::access(int id, ThreadParent* overseer){
             nbOfOneWaiting++;
             mutex.release();
             overseer->endSect();
+            std::cout << "Thread " << overseer->getId() << " waiting" << std::endl;
             // Attendre d'être libéré
             numberOfOnesWaiting.acquire(); // Bloquant
         }
@@ -39,6 +41,7 @@ void SasAccess::access(int id, ThreadParent* overseer){
             idIn = false;
             nbIn++;
             mutex.release();
+            std::cout << "Thread " << overseer->getId() << " entered without waiting" << std::endl;
             overseer->endSect();
         }
         else{
