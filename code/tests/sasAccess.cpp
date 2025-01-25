@@ -116,5 +116,5 @@ void SasAccess::leave(int id, ThreadParent* overseer){
     }
     mutex.release();
     std::cout << "Thread " << overseer->getId() << " out leave" << std::endl;
-    overseer->endSect();
+    overseer->endScen();
 }

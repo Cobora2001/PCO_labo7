@@ -56,7 +56,6 @@ private:
         startSect(2); // This section is so that we can check who takes the mutex, and define valid scenarios
         endSect();
         sas->leave(agent, this);
-        endScenario();
     }
 };
 
