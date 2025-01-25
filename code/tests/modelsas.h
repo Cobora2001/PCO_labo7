@@ -131,7 +131,7 @@ class ModelSas : public PcoModel
         std::cout << "---------------------------------------" << std::endl;
         std::cout << "Possible values for nbIn : ";
         for(int i = 0; i < possibleNbIn.size(); ++i) {
-            std::cout << i <<;
+            std::cout << i;
             if(i < possibleNbIn.size() - 1)
                 std::cout << ", ";
         }
