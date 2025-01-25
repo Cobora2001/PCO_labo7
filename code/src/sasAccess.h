@@ -4,12 +4,13 @@
 #include <pcosynchro/pcothread.h>
 #include <pcosynchro/pcomutex.h>
 #include <pcosynchro/pcosemaphore.h>
+#include "observablethread.h"
 
 class SasAccess{
 public:
     SasAccess(unsigned int size);
-    void access(int id);
-    void leave(int id);
+    void access(int id, ObservableThread* overseer);
+    void leave(int id, ObservableThread* overseer);
 
     int getNbIn() {
         mutex.acquire();

@@ -11,7 +11,7 @@ SasAccess::SasAccess(unsigned int N)
     }
 }
 
-void SasAccess::access(int id){
+void SasAccess::access(int id, ObservableThread* overseer){
     mutex.acquire();
     
     if(id == 1){
@@ -46,7 +46,7 @@ void SasAccess::access(int id){
     }
 }
 
-void SasAccess::leave(int id){
+void SasAccess::leave(int id, ObservableThread* overseer){
     mutex.acquire();
     nbIn--;
 
