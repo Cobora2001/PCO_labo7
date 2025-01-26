@@ -48,6 +48,12 @@ public:
 
 private:
     int agent;
+    
+
+    /**
+     * @brief The run function of the thread that will be called by the model checker
+     *        This function will call the access and leave functions of the SAS
+     */
     void run() override
     {
         startSect(0); // This section is so that we can check who takes the mutex, and define valid scenarios
@@ -75,33 +81,105 @@ public:
 
 class ModelSas : public PcoModel
 {
+    int currentTest = 3; // MODIFY THIS VALUE TO TEST THE DIFFERENT SCENARIOS
+    /**
+     * @brief Checks the invariants of the model
+     * @return True if the invariants are respected, false otherwise
+     */
     bool checkInvariants() override 
     {
         return true;
     }
     
-    
+    /**
+     * @brief Builds the threads and scenariobuilder
+     */
     void build() override
     {
+    // Lets suppose that we want to test the SAS with the following scenarios:
+    // 1. Size = 2, 2 threads
+    // 2. Size = 2, 3 threads
+    // 3. Size = 3, 4 threads
+
+    auto builder = std::make_unique<PredefinedScenarioBuilderIter>();
+    std::vector<std::vector<int>> linkedSections = {
+        {0, 1}, 
+        {2, 3}
+    };
+    std::vector<ObservableThread*> threadPtrs;
+
+    // TEST 1 :
+    if (currentTest == 1) {
         threads.emplace_back(std::make_unique<ThreadZero>("0"));
         threads.emplace_back(std::make_unique<ThreadOne>("1"));
- 
-        auto t0 = threads[0].get();
-        auto t1 = threads[1].get();
-        auto builder = std::make_unique<PredefinedScenarioBuilderIter>();
+        for (const auto& thread : threads) {
+            threadPtrs.push_back(thread.get());
+        }
 
-        ScenarioCreator scenarioCreator({t0, t1}, {{0, 1}, {2, 3}});
-        std::vector<Scenario> scenarios = scenarioCreator.createScenarios();
-        builder->setScenarios(scenarios);
-        scenarioBuilder = std::move(builder);
     }
 
+    // TEST 2 :
+    if (currentTest == 2) {
+    // Creation of 3 threads (2 of type 0 and 1 of type 1)
+    for (int i = 0; i < 2; ++i) {
+        threads.emplace_back(std::make_unique<ThreadZero>(std::to_string(i)));
+    }
+
+    threads.emplace_back(std::make_unique<ThreadOne>("2"));
+
+    for (const auto& thread : threads) {
+        threadPtrs.push_back(thread.get());
+    }
+
+    }
+
+    // TEST 3 :
+    if (currentTest == 3) {
+
+    // Creation of 4 threads (2 of each type)
+    for (int i = 0; i < 2; ++i) {
+        threads.emplace_back(std::make_unique<ThreadZero>(std::to_string(i)));
+    }
+
+    for (int i = 2; i < 4; ++i) {
+        threads.emplace_back(std::make_unique<ThreadOne>(std::to_string(i)));
+    }
+
+    // Add the threads to the vector of thread pointers
+    for (const auto& thread : threads) {
+        threadPtrs.push_back(thread.get());
+    }
+ 
+    }
+
+    ScenarioCreator scenarioCreator(threadPtrs, linkedSections);
+    std::vector<Scenario> scenarios = scenarioCreator.createScenarios();
+    builder->setScenarios(scenarios);
+    scenarioBuilder = std::move(builder);
+
+    }
+
+    /**
+     * @brief Function called by the model checker before running a scenario.
+     *        This function initializes the SAS.
+     * @param scenario The scenario that will be run.
+     */
     void preRun(Scenario& /*scenario*/) override
     {
-        sas = new SasAccess(2);
+        delete sas; // Free the previous SAS
+        if (currentTest == 1 || currentTest == 2) {
+            sas = new SasAccess(2);
+        } else if (currentTest == 3) {
+            sas = new SasAccess(3); 
+        }
         std::cout << std::endl; // Just for the formatting of the output
     }
 
+    /**
+     * @brief Function called by the model checker after running a scenario.
+     *        This function shows the information about our scenario.
+     * @param scenario The scenario that has been run.
+     */
     void postRun(Scenario &scenario) override 
     {
         std::cout << "Scenario : ";

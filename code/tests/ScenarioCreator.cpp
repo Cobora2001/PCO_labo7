@@ -1,7 +1,11 @@
 // ScenarioCreator.cpp
 #include "ScenarioCreator.h"
 
-// Recursive backtracking function to generate all interleaved scenarios
+/// Recursive backtracking function to generate all interleaved scenarios
+/// \param currentScenario: The scenario being constructed.
+/// \param linkedSections: The mapping of sections between threads.
+/// \param threadSectionIndices: Current progress of each thread in terms of section index.
+/// \param scenarios: The list of scenarios being generated.
 void ScenarioCreator::backtrack(
     Scenario& currentScenario,
     const std::vector<std::vector<int>>& linkedSections,
@@ -18,6 +22,7 @@ void ScenarioCreator::backtrack(
         }
     }
 
+    // If all threads are done, "save" the current scenario
     if (allCompleted) {
         scenarios.push_back(currentScenario);
         return;
@@ -40,7 +45,7 @@ void ScenarioCreator::backtrack(
             // Update the thread's section index
             threadSectionIndices[i]++;
 
-            // Recurse
+            // Recurse to the next thread
             backtrack(currentScenario, linkedSections, threadSectionIndices, scenarios);
 
             // Backtrack: remove the added points and reset the thread's section index

@@ -9,10 +9,34 @@ class ThreadParent;
 
 class SasAccess{
 public:
-    SasAccess(unsigned int size);
+
+    /**
+     * @brief Construct a new Sas Access object
+     * @param size the size of the sas
+     * @param accessSectionId the ID of the section in the Access function
+     * @param leaveSectionId the ID of the section in the Leave function
+     * default values are 1 and 3 based on test that we run.
+     */
+    SasAccess(unsigned int size, unsigned int accessSectionId = 1, unsigned int leaveSectionId = 3); 
+
+    /**
+     * @brief Function called by an agent to enter the sas
+     * @param id the agent's id (0 or 1)
+     * @param overseer the agent's thread
+     */
     void access(int id, ThreadParent* overseer);
+
+    /**
+     * @brief Function called by an agent to leave the sas
+     * @param id the agent's id (0 or 1)
+     * @param overseer the agent's thread
+     */
     void leave(int id, ThreadParent* overseer);
 
+    /**
+     * @brief Get the number of agents in the sas
+     * @return the number of agents in the sas
+     */
     int getNbIn() {
         mutex.acquire();
         int res = nbIn;
@@ -20,6 +44,10 @@ public:
         return res;
     }
 
+    /**
+     * @brief Get the number of 1 waiting to enter the sas
+     * @return the number of 1 waiting to enter the sas
+     */
     int getNbOfOneWaiting() {
         mutex.acquire();
         int res = nbOfOneWaiting;
@@ -27,6 +55,10 @@ public:
         return res;
     }
 
+    /**
+     * @brief Get the number of 0 waiting to enter the sas
+     * @return the number of 0 waiting to enter the sas
+     */
     int getNbOfZerosWaiting() {
         mutex.acquire();
         int res = nbOfZerosWaiting;
@@ -34,9 +66,12 @@ public:
         return res;
     }
 
+    /**
+     * @brief Reset the sas for the next scenario
+     */
     void reset() {
         mutex.acquire();
-        // Libérer les personnes en attente pour qu'elles ne bloquent pas le prochain scénario
+        // Free all the agents waiting for the next scenario
         for(unsigned int i = 0; i < nbOfOneWaiting; ++i){
             numberOfOnesWaiting.release();
         }
@@ -44,7 +79,7 @@ public:
             numberOfZerosWaiting.release();
         }
 
-        // Réinitialiser les variables
+        // Reset the values
         nbIn = 0;
         nbOfOneWaiting = 0;
         nbOfZerosWaiting = 0;
@@ -53,36 +88,51 @@ public:
         mutex.release();
     }
 private:
-    // Mutex pour protéger la section critique
+    // Mutex to protect the critical section
     PcoSemaphore mutex;
 
-    // Sémaphores pour attendre le droit d'entrer dans la section critique
+    // Semaphore to wait for the right to enter the critical section
     PcoSemaphore numberOfZerosWaiting;
     PcoSemaphore numberOfOnesWaiting;
 
-    // Taille du sas
+    // the size of the sas
     const unsigned int SIZE;
-    // Nombre de personnes présentes dans le sas
+    // Number of agents in the sas
     unsigned int nbIn;
-    // Nombre de 1 en attente pour entrer dans le sas
+    // Number of 1 waiting to enter the sas
     unsigned int nbOfOneWaiting;
-    // Nombre de 0 en attente pour entrer dans le sas
+    // Number of 0 waiting to enter the sas
     unsigned int nbOfZerosWaiting;
 
-    // Type d'agents actuellement dans le sas (0 ou 1)
+    // Agent's type in the sas
     bool idIn;
+
+    // The ID of the section in the Access function
+    unsigned int accessSectionId;
+
+    // The ID of the section in the Leave function
+    unsigned int leaveSectionId;
     
-    // Vérifie si un agent de type 1 peut entrer
+    /**
+     * @brief Check if an agent can enter the sas (agent type 1)
+     * @return true if the agent can enter the sas, false otherwise
+     */
     bool canEnterOne() {
         return (nbIn < SIZE) && (nbIn == 0 || idIn == 1);
     }
 
-    // Vérifie si un agent de type 0 peut entrer
+    /**
+     * @brief Check if an agent can enter the sas (agent type 0)
+     * @return true if the agent can enter the sas, false otherwise
+     */
     bool canEnterZero() {
         return (nbIn < SIZE) && (nbIn == 0 || idIn == 0);
     }
 
-    // Vérifie si des agents sont en attente
+    /**
+     * @brief Check if there are people waiting to enter the sas
+     * @return true if there are people waiting, false otherwise
+     */
     bool peopleWaiting() {
         return nbOfOneWaiting > 0 || nbOfZerosWaiting > 0;
     }

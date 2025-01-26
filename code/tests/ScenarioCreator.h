@@ -14,13 +14,19 @@ private:
 
     // Recursive backtracking helper function
     void backtrack(
-        Scenario& currentScenario,
-        const std::vector<std::vector<int>>& linkedSections,
-        std::vector<int>& threadSectionIndices, // Current section index for each thread
+        Scenario& currentScenario, 
+        const std::vector<std::vector<int>>& linkedSections, 
+        std::vector<int>& threadSectionIndices, 
         std::vector<Scenario>& scenarios
     ) const;
 
 public:
+
+    /**
+     * @brief ScenarioCreator constructor
+     * @param threads The threads to create scenarios for
+     * @param linkedSections The sections that are linked between threads
+     */
     ScenarioCreator(std::vector<ObservableThread*> threads, std::vector<std::vector<int>> linkedSections)
         : threads(threads), linkedSections(linkedSections) {}
 
